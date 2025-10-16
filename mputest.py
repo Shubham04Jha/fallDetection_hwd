@@ -7,6 +7,11 @@ import time
 from time import sleep 
 import math
 
+# fall and not fall url
+fall_url="https://falldetection-backend-production.up.railway.app/updatestatus/fall" 
+safe_url= "https://falldetection-backend-production.up.railway.app/updatestatus/safe" 
+led = LED(17)
+
 # --- CONFIGURATION CONSTANTS ---
 # Increased threshold to filter out high noise floor.
 GYRO_THRESHOLD = 7.0 

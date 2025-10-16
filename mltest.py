@@ -5,11 +5,20 @@ import math
 import joblib
 import pandas as pd
 import numpy as np
+import requests
+from gpiozero import LED
+
+# fall and not fall url
+fall_url="https://falldetection-backend-production.up.railway.app/updatestatus/fall" 
+safe_url= "https://falldetection-backend-production.up.railway.app/updatestatus/safe" 
+led = LED(17)
+
 
 # --- ML Model Configuration ---
-MODEL_FILE = 'fall_detection_model_LITE.joblib'
+MODEL_FILE = 'get-model/svc.pkl'
+SCALER_FILE = 'get-model/scaler.pkl'
 # NOTE: The model expects TOTAL acceleration (acc_x, acc_y, acc_z) and calibrated gyro
-FEATURES = ['acc_x', 'acc_y', 'acc_z', 'gyro_x', 'gyro_y', 'gyro_z', 'svm_acc']
+FEATURES = ['Ax', 'Ay', 'Ay', 'Gx', 'Gy', 'Gz']
 # ------------------------------
 
 # --- MPU6050 Configuration ---
@@ -43,6 +52,7 @@ except FileNotFoundError:
 
 try:
     model = joblib.load(MODEL_FILE)
+    scaler = joblib.load(SCALER_FILE)
     print(f"✅ Model '{MODEL_FILE}' loaded successfully.")
 except Exception as e:
     print(f"❌ Error loading model: {e}")
@@ -137,20 +147,22 @@ def predict_fall(acc_x, acc_y, acc_z, gyro_x, gyro_y, gyro_z):
         return None
 
     # Create input DataFrame
-    df = pd.DataFrame([{
-        'acc_x': acc_x,
-        'acc_y': acc_y,
-        'acc_z': acc_z,
-        'gyro_x': gyro_x,
-        'gyro_y': gyro_y,
-        'gyro_z': gyro_z
-    }])
+    sample = np.array([[
+        gyro_x,
+        gyro_y,
+        gyro_z,
+        acc_x,
+        acc_y,
+        acc_z
+    ]])
+    scaled_sample = scaler.transform(sample)
+    #scaled_df = pd.Data
 
     # Compute SVM acceleration feature (based on total acceleration)
-    df['svm_acc'] = np.sqrt(df['acc_x']**2 + df['acc_y']**2 + df['acc_z']**2)
+    #df['svm_acc'] = np.sqrt(df['acc_x']**2 + df['acc_y']**2 + df['acc_z']**2)
 
     # Predict (0=ADL, 1=Fall)
-    pred = model.predict(df[FEATURES])[0]
+    pred = model.predict(scaled_sample)[0]
     return bool(pred)
 
 # ----------------------------------------------------------------------
@@ -174,8 +186,8 @@ if __name__ == "__main__":
             # 2. Predict
             if model:
                 is_fall = predict_fall(ax, ay, az, gx, gy, gz)
-                if not is_fall:
-                    continue
+                #if not is_fall:
+                 #   continue
                 prediction_label = 'FALL DETECTED ' if is_fall else '✅ SAFE (ADL)'
                 
                 # 3. Print result and data
@@ -183,6 +195,14 @@ if __name__ == "__main__":
                 print(f"  Accel (Total): X:{ax:6.2f}g | Y:{ay:6.2f}g | Z:{az:6.2f}g")
                 print(f"  Gyro (Calib.): X:{gx:6.2f}°/s | Y:{gy:6.2f}°/s | Z:{gz:6.2f}°/s")
                 print("-" * 50)
+                #print(safe_url)
+                if is_fall:
+                    requests.get(fall_url)
+                    led.on()
+                    sleep(10)
+                else:
+                    requests.get(safe_url)
+                    led.off()
             else:
                 print(f"[{time.strftime('%H:%M:%S')}] Model not loaded, skipping prediction.")
                 print(f"  Data: Ax={ax:6.2f}g, Ay={ay:6.2f}g, Az={az:6.2f}g")

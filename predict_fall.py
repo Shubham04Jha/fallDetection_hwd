@@ -2,7 +2,7 @@ import joblib
 import pandas as pd
 import numpy as np
 
-MODEL_FILE = 'fall_detection_model_LITE.joblib'
+MODEL_FILE = 'more_sensitive_svc.pkl'
 FEATURES = ['acc_x', 'acc_y', 'acc_z', 'gyro_x', 'gyro_y', 'gyro_z', 'svm_acc']
 
 # Load model

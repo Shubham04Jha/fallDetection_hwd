@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 fall_detection_model_LITE.joblib
 *.joblib
+secret/
